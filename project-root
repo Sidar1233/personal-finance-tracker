@@ -1,0 +1,24 @@
+/project-root
+│
+├── /frontend
+│   ├── index.html
+│   ├── styles.css
+│   ├── script.js
+│   └── /assets
+│
+├── /backend
+│   ├── server.js     (ако ползваш Node.js)
+│   ├── routes/
+│   ├── controllers/
+│   └── database/
+│
+├── /database
+│   ├── schema.sql
+│   └── example-data.sql
+│
+├── /docs
+│   ├── concept.md
+│   ├── research.md
+│   └── introduction.md
+│
+└── README.md
