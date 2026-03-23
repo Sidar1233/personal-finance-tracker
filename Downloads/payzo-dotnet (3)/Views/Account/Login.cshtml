@@ -1,0 +1,74 @@
+@model LoginViewModel
+@{ Layout = null; }
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payzo – Вход</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body{background:linear-gradient(135deg,#0d3080,#1a4fb5 50%,#2563eb);display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+    .box{background:#fff;border-radius:24px;padding:44px 40px;width:100%;max-width:420px;box-shadow:0 40px 100px rgba(0,0,0,.3);animation:slideUp .4s ease}
+    .demo-row{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:8px;cursor:pointer;transition:background .15s;border-bottom:1px solid #f1f5f9}
+    .demo-row:hover{background:#e2e8f0}.demo-row:last-child{border-bottom:none}
+    .divider-text{display:flex;align-items:center;gap:12px;color:#94a3b8;font-size:.8rem;margin:16px 0}
+    .divider-text::before,.divider-text::after{content:'';flex:1;height:1px;background:#e2e8f0}
+  </style>
+</head>
+<body>
+<div class="box">
+  <div style="text-align:center;margin-bottom:24px"><img src="/images/logo.png" alt="Payzo" style="height:52px"></div>
+  <h1 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:1.5rem;text-align:center;color:#0d3080;margin-bottom:4px">Добре дошли!</h1>
+  <p style="text-align:center;color:#475569;font-size:.9rem;margin-bottom:24px">Влезте в акаунта си</p>
+
+  @if (TempData["Success"] != null)
+  {
+    <div class="alert alert-success show">✅ @TempData["Success"]</div>
+  }
+
+  <div style="background:#f8fafc;border-radius:12px;padding:14px 16px;margin-bottom:20px;border:1px solid #e2e8f0">
+    <div style="font-size:.75rem;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">🚀 Бързо влизане</div>
+    @foreach (var (email, pass, role, cls) in new[]{
+        ("superadmin@payzo.bg","superadmin123","Супер Админ","role-superadmin"),
+        ("admin@payzo.bg","admin123","Администратор","role-admin"),
+        ("ivan@example.bg","ivan123","Потребител","role-user")})
+    {
+      <div class="demo-row" onclick="fillLogin('@email','@pass')">
+        <span style="font-size:.8rem;color:#475569">@email</span>
+        <span class="badge @cls" style="font-size:.7rem">@role</span>
+      </div>
+    }
+  </div>
+
+  <div class="divider-text">или въведете ръчно</div>
+
+  @if (!string.IsNullOrEmpty(Model.Error))
+  {
+    <div class="alert alert-error show">❌ @Model.Error</div>
+  }
+
+  <form method="post" action="/Account/Login">
+    @Html.AntiForgeryToken()
+    <div class="form-group">
+      <label class="form-label">Имейл адрес</label>
+      <input name="Email" type="email" class="form-control" placeholder="name@example.bg" value="@Model.Email">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Парола</label>
+      <input name="Password" type="password" class="form-control" placeholder="••••••••">
+    </div>
+    <button type="submit" class="btn btn-primary btn-full btn-lg" style="margin-top:16px">Вход</button>
+  </form>
+  <p style="text-align:center;margin-top:18px;font-size:.88rem;color:#475569">
+    Нямате акаунт? <a href="/Account/Register" style="color:#1a4fb5;font-weight:600">Регистрирайте се</a>
+  </p>
+</div>
+<script>
+function fillLogin(e,p){
+  document.querySelector('[name=Email]').value=e;
+  document.querySelector('[name=Password]').value=p;
+  document.querySelector('form').submit();
+}
+</script>
+</body></html>

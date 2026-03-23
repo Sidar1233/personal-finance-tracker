@@ -1,0 +1,134 @@
+@model UsersViewModel
+@{
+    ViewData["Title"] = "Потребители";
+    ViewData["Subtitle"] = "Управление на всички акаунти в системата";
+    ViewData["ActiveNav"] = "users";
+    bool isSuperAdmin = User.IsInRole("SuperAdmin");
+    var roles = new[]{ ("","Всички роли"), ("SuperAdmin","Супер Админ"), ("Admin","Администратор"), ("User","Потребител") };
+    string RoleBadge(UserRole r) => r switch { UserRole.SuperAdmin=>"role-superadmin", UserRole.Admin=>"role-admin", _=>"role-user" };
+    string RoleLabel(UserRole r) => r switch { UserRole.SuperAdmin=>"Супер Админ", UserRole.Admin=>"Администратор", _=>"Потребител" };
+}
+
+<div class="grid-4 section-gap">
+  <div class="stat-card"><div class="stat-icon" style="background:#dbeafe">👥</div><div class="stat-label">Потребители</div><div class="stat-value">@Model.TotalUsers</div></div>
+  <div class="stat-card"><div class="stat-icon" style="background:#dcfce7">✅</div><div class="stat-label">Активни</div><div class="stat-value" style="color:#16a34a">@Model.ActiveUsers</div></div>
+  <div class="stat-card"><div class="stat-icon" style="background:#ede9fe">🛡️</div><div class="stat-label">Администратори</div><div class="stat-value" style="color:#7c3aed">@Model.AdminCount</div></div>
+  <div class="stat-card"><div class="stat-icon" style="background:#fef3c7">💳</div><div class="stat-label">Транзакции</div><div class="stat-value">@Model.TotalTransactions</div></div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">👥 Управление на потребители</span>
+    <button class="btn btn-primary btn-sm" onclick="openModal('modal-user')">+ Нов потребител</button>
+  </div>
+
+  <form method="get" action="/Users" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+    <input name="search" class="form-control" style="max-width:240px" placeholder="🔍 Търси..." value="@Context.Request.Query["search"]">
+    <select name="role" class="form-control" style="max-width:170px">
+      @foreach (var (v,l) in roles) { <option value="@v" selected="@(Context.Request.Query["role"]==v ? "selected" : null)">@l</option> }
+    </select>
+    <select name="status" class="form-control" style="max-width:150px">
+      <option value="">Всички</option>
+      <option value="active" selected="@(Context.Request.Query["status"]=="active" ? "selected" : null)">Активни</option>
+      <option value="inactive" selected="@(Context.Request.Query["status"]=="inactive" ? "selected" : null)">Неактивни</option>
+    </select>
+    <button type="submit" class="btn btn-ghost btn-sm">Филтрирай</button>
+  </form>
+
+  <div class="table-wrapper">
+    <table class="payzo-table">
+      <thead><tr><th>Потребител</th><th>Имейл</th><th>Роля</th><th>Статус</th><th>Последен вход</th><th></th></tr></thead>
+      <tbody>
+        @foreach (var u in Model.Users)
+        {
+          var canEdit   = isSuperAdmin || (User.IsInRole("Admin") && u.Role == UserRole.User);
+          var canDelete = isSuperAdmin && u.Id != Model.CurrentUser.Id;
+          <tr>
+            <td>
+              <div style="display:flex;align-items:center;gap:10px">
+                <div class="avatar" style="background:@u.AvatarColor">@u.Avatar</div>
+                <div><div style="font-weight:600">@u.Name</div><div style="font-size:.75rem;color:#475569">@u.Id</div></div>
+              </div>
+            </td>
+            <td>@u.Email</td>
+            <td><span class="badge @RoleBadge(u.Role)">@RoleLabel(u.Role)</span></td>
+            <td><span class="badge @(u.Active?"badge-green":"badge-red")">@(u.Active?"● Активен":"○ Неактивен")</span></td>
+            <td style="color:#475569;font-size:.88rem">@(u.LastLogin?.ToString("dd.MM.yyyy") ?? "—")</td>
+            <td>
+              <div style="display:flex;gap:6px;justify-content:flex-end">
+                @if (canEdit)
+                {
+                  <button class="btn btn-ghost btn-sm" onclick="editUser('@u.Id','@Html.Raw(u.Name.Replace("'","\\'"))','@u.Email','@u.Role','@u.Active.ToString().ToLower()')">✏️</button>
+                  <form method="post" action="/Users/ToggleActive" style="display:inline">
+                    @Html.AntiForgeryToken()<input type="hidden" name="id" value="@u.Id">
+                    <button type="submit" class="btn btn-ghost btn-sm" title="@(u.Active?"Деактивирай":"Активирай")">@(u.Active?"🔒":"🔓")</button>
+                  </form>
+                }
+                @if (canDelete)
+                {
+                  <form method="post" action="/Users/Delete" style="display:inline" onsubmit="return confirm('Изтриване на потребителя и всички негови данни?')">
+                    @Html.AntiForgeryToken()<input type="hidden" name="id" value="@u.Id">
+                    <button type="submit" class="btn btn-ghost btn-sm">🗑️</button>
+                  </form>
+                }
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- User modal -->
+<div class="modal-backdrop" id="modal-user">
+  <div class="modal">
+    <div class="modal-header"><h3 id="um-title">👤 Нов потребител</h3><button class="modal-close">✕</button></div>
+    <div class="modal-body">
+      <form id="user-form" method="post" action="/Users/Create">
+        @Html.AntiForgeryToken()
+        <input type="hidden" id="u-id" name="id" value="">
+        <div class="form-group"><label class="form-label">Пълно име</label><input id="u-name" name="name" class="form-control" placeholder="Иван Петров"></div>
+        <div class="form-group"><label class="form-label">Имейл</label><input id="u-email" name="email" type="email" class="form-control"></div>
+        <div class="form-group"><label class="form-label" id="pass-label">Парола</label><input id="u-pass" name="password" type="password" class="form-control" placeholder="Минимум 6 символа"></div>
+        <div class="form-group">
+          <label class="form-label">Роля</label>
+          <select id="u-role" name="role" class="form-control" onchange="checkRole(this)">
+            <option value="User">Потребител</option>
+            <option value="Admin">Администратор</option>
+            @if (isSuperAdmin) { <option value="SuperAdmin">Супер Администратор</option> }
+          </select>
+        </div>
+        <div id="role-warn" class="alert alert-warn" style="display:none">⚠️ Супер администраторът има пълни права над системата.</div>
+        <div class="form-group" style="margin-top:8px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="u-active" name="active" value="true" checked>
+            <span class="form-label" style="margin:0">Активен акаунт</span>
+          </label>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-user')">Отказ</button>
+      <button class="btn btn-primary" onclick="document.getElementById('user-form').submit()">💾 Запази</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function editUser(id,name,email,role,active){
+  document.getElementById('user-form').action='/Users/Edit';
+  document.getElementById('u-id').value=id;
+  document.getElementById('u-name').value=name;
+  document.getElementById('u-email').value=email;
+  document.getElementById('u-role').value=role;
+  document.getElementById('u-active').checked=(active==='true');
+  document.getElementById('u-pass').placeholder='Нова парола (празно = без промяна)';
+  document.getElementById('pass-label').textContent='Нова парола (оставете празно)';
+  document.getElementById('um-title').textContent='✏️ Редактиране';
+  openModal('modal-user');
+}
+function checkRole(sel){
+  document.getElementById('role-warn').style.display=sel.value==='SuperAdmin'?'flex':'none';
+}
+</script>

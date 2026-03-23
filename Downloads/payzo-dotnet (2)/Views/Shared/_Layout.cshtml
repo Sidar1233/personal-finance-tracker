@@ -1,0 +1,111 @@
+@using System.Security.Claims
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>@(ViewData["Title"]?.ToString() ?? "Payzo") – Payzo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/site.js" defer></script>
+</head>
+<body>
+@{
+    var uName        = User.FindFirst(ClaimTypes.Name)?.Value ?? "";
+    var uRole        = User.FindFirst(ClaimTypes.Role)?.Value ?? "User";
+    var uAvatar      = User.FindFirst("Avatar")?.Value ?? "?";
+    var uAvatarColor = User.FindFirst("AvatarColor")?.Value ?? "#1a4fb5";
+    var activeNav    = ViewData["ActiveNav"]?.ToString() ?? "";
+    var pageTitle    = ViewData["Title"]?.ToString() ?? "";
+    var pageSubtitle = ViewData["Subtitle"]?.ToString() ?? "";
+    bool isAdmin     = uRole == "Admin" || uRole == "SuperAdmin";
+    bool isSuperAdmin= uRole == "SuperAdmin";
+    var roleLabel    = uRole switch { "SuperAdmin"=>"Супер Админ", "Admin"=>"Администратор", _=>"Потребител" };
+    var roleCls      = uRole switch { "SuperAdmin"=>"role-superadmin", "Admin"=>"role-admin", _=>"role-user" };
+}
+<div class="app-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <img src="/images/logo.png" alt="Payzo" style="height:42px;object-fit:contain;">
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Основни</div>
+      <a class="nav-link @(activeNav=="dashboard"?"active":"")" href="/Dashboard/Index">
+        <span class="icon">🏠</span> Табло
+      </a>
+      <a class="nav-link @(activeNav=="transactions"?"active":"")" href="/Transactions/Index">
+        <span class="icon">💳</span> Транзакции
+      </a>
+      <a class="nav-link @(activeNav=="budget"?"active":"")" href="/Budget/Index">
+        <span class="icon">🎯</span> Бюджет
+      </a>
+      <a class="nav-link @(activeNav=="goals"?"active":"")" href="/Goals/Index">
+        <span class="icon">🏆</span> Цели
+      </a>
+      @if (isAdmin)
+      {
+        <div class="nav-section-label">Администрация</div>
+        <a class="nav-link @(activeNav=="users"?"active":"")" href="/Users/Index">
+          <span class="icon">👥</span> Потребители
+        </a>
+        <a class="nav-link @(activeNav=="reports"?"active":"")" href="/Users/Reports">
+          <span class="icon">📊</span> Отчети
+        </a>
+      }
+      @if (isSuperAdmin)
+      {
+        <a class="nav-link @(activeNav=="settings"?"active":"")" href="/Users/Settings">
+          <span class="icon">⚙️</span> Системни настройки
+        </a>
+      }
+    </nav>
+    <div class="sidebar-user" onclick="window.location.href='/Account/Profile'" style="cursor:pointer">
+      <div class="avatar" style="background:@uAvatarColor">@uAvatar</div>
+      <div class="sidebar-user-info">
+        <div class="name">@uName</div>
+        <div class="role"><span class="badge @roleCls" style="font-size:.65rem;padding:2px 6px">@roleLabel</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main-content">
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1>@pageTitle</h1>
+        @if (!string.IsNullOrEmpty(pageSubtitle))
+        {
+          <p>@pageSubtitle</p>
+        }
+      </div>
+      <div class="topbar-right">
+        <div class="avatar" style="background:@uAvatarColor;cursor:pointer"
+             onclick="window.location.href='/Account/Profile'" title="Профил">@uAvatar</div>
+        <form method="post" action="/Account/Logout" style="display:inline">
+          @Html.AntiForgeryToken()
+          <button type="submit" class="btn btn-ghost btn-sm">Изход</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="page-body">
+      @if (TempData["Success"] != null)
+      {
+        <div class="alert alert-success show" style="margin-bottom:16px">✅ @TempData["Success"]</div>
+      }
+      @if (TempData["Error"] != null)
+      {
+        <div class="alert alert-error show" style="margin-bottom:16px">❌ @TempData["Error"]</div>
+      }
+      @RenderBody()
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+@RenderSection("Scripts", required: false)
+</body>
+</html>

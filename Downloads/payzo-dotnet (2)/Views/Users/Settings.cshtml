@@ -1,0 +1,72 @@
+@{
+    ViewData["Title"] = "Системни настройки";
+    ViewData["Subtitle"] = "Само за Супер Администратор";
+    ViewData["ActiveNav"] = "settings";
+    var stats = ViewBag.Stats;
+}
+<div class="alert alert-warn show section-gap">⚠️ Тази страница е достъпна само за <strong>Супер Администратор</strong>.</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-header"><span class="card-title">⚙️ Настройки на приложението</span></div>
+    <div class="form-group"><label class="form-label">Наименование</label><input class="form-control" value="Payzo"></div>
+    <div class="form-group"><label class="form-label">Валута</label>
+      <select class="form-control"><option>BGN (€)</option><option>EUR (€)</option><option>USD ($)</option></select></div>
+    <div class="form-group"><label class="form-label">Версия</label><input class="form-control" value="1.0.0" readonly></div>
+    <div class="form-group"><label class="form-label">Framework</label><input class="form-control" value="ASP.NET Core 8 MVC" readonly></div>
+    <button class="btn btn-primary" onclick="showToast('Настройките са запазени!','success')">💾 Запази</button>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">🔒 Сигурност</span></div>
+    <div class="form-group"><label style="display:flex;align-items:center;gap:10px;cursor:pointer"><input type="checkbox" checked><span class="form-label" style="margin:0">BCrypt хеширане на пароли</span></label></div>
+    <div class="form-group"><label style="display:flex;align-items:center;gap:10px;cursor:pointer"><input type="checkbox" checked><span class="form-label" style="margin:0">Cookie автентикация</span></label></div>
+    <div class="form-group"><label style="display:flex;align-items:center;gap:10px;cursor:pointer"><input type="checkbox" checked><span class="form-label" style="margin:0">AntiForgery токени</span></label></div>
+    <div class="form-group"><label class="form-label">Сесия изтича след (часове)</label><input class="form-control" type="number" value="8"></div>
+    <button class="btn btn-primary" onclick="showToast('Настройките са запазени!','success')">💾 Запази</button>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">🗄️ Данни (In-Memory Store)</span></div>
+    <div class="grid-2" style="margin-bottom:16px;gap:12px">
+      <div class="stat-card" style="padding:12px"><div class="stat-label">Потребители</div><div class="stat-value" style="font-size:1.4rem">@stats.Users</div></div>
+      <div class="stat-card" style="padding:12px"><div class="stat-label">Активни</div><div class="stat-value" style="font-size:1.4rem;color:#16a34a">@stats.Active</div></div>
+    </div>
+    <p class="text-muted mb-4">⚠️ Данните са в паметта (in-memory). При рестарт се зареждат отново демо данните. За production — добавете EF Core + SQL Server.</p>
+    <a href="/Users/Index" class="btn btn-outline btn-sm">👥 Управление на потребители</a>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">🛡️ Матрица с права</span></div>
+    <div class="table-wrapper">
+      <table class="payzo-table" style="font-size:.82rem">
+        <thead><tr><th>Функция</th><th>Потребител</th><th>Админ</th><th>Супер Админ</th></tr></thead>
+        <tbody>
+          @foreach (var row in new[]{
+            new[]{"Лични финанси","✅","✅","✅"},
+            new[]{"Преглед потребители","❌","✅","✅"},
+            new[]{"Редакция потребители","❌","✅ (user)","✅"},
+            new[]{"Изтриване потребители","❌","❌","✅"},
+            new[]{"Отчети","❌","✅","✅"},
+            new[]{"Системни настройки","❌","❌","✅"},
+            new[]{"Задаване admin роля","❌","❌","✅"},
+          })
+          {
+            <tr>@{ int ci=0; foreach(var c in row){ <td style="@(ci++>0?"text-align:center":"")">@c</td> } }</tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+function showToast(msg, type) {
+  var c=document.getElementById('toast-container');
+  var el=document.createElement('div');
+  el.className='toast '+type;
+  el.innerHTML='<span>'+(type==='success'?'✅':'ℹ️')+'</span><span>'+msg+'</span>';
+  c.appendChild(el);
+  setTimeout(()=>el.remove(),3000);
+}
+</script>

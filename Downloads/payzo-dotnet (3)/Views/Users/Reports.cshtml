@@ -1,0 +1,58 @@
+@{
+    ViewData["Title"] = "Отчети";
+    ViewData["Subtitle"] = "Системна статистика и анализи";
+    ViewData["ActiveNav"] = "reports";
+    var users = (List<Payzo.Models.User>)ViewBag.Users;
+    string RoleBadge(UserRole r) => r switch { UserRole.SuperAdmin=>"role-superadmin", UserRole.Admin=>"role-admin", _=>"role-user" };
+    string RoleLabel(UserRole r) => r switch { UserRole.SuperAdmin=>"Супер Админ", UserRole.Admin=>"Администратор", _=>"Потребител" };
+}
+<div class="grid-4 section-gap">
+  <div class="stat-card"><div class="stat-icon" style="background:#dbeafe">👥</div><div class="stat-label">Потребители</div><div class="stat-value">@users.Count</div></div>
+  <div class="stat-card"><div class="stat-icon" style="background:#dcfce7">✅</div><div class="stat-label">Активни</div><div class="stat-value" style="color:#16a34a">@users.Count(u=>u.Active)</div></div>
+  <div class="stat-card"><div class="stat-icon" style="background:#ede9fe">🛡️</div><div class="stat-label">Администратори</div><div class="stat-value" style="color:#7c3aed">@users.Count(u=>u.Role!=UserRole.User)</div></div>
+  <div class="stat-card"><div class="stat-icon" style="background:#fef3c7">📊</div><div class="stat-label">Роли</div><div class="stat-value">3</div></div>
+</div>
+
+<div class="grid-2 section-gap">
+  <div class="card">
+    <div class="card-header"><span class="card-title">👥 Потребители по роля</span></div>
+    <canvas id="chart-roles" height="200"></canvas>
+  </div>
+  <div class="card">
+    <div class="card-header"><span class="card-title">📊 Активност</span></div>
+    <canvas id="chart-active" height="200"></canvas>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><span class="card-title">📋 Всички потребители</span></div>
+  <div class="table-wrapper">
+    <table class="payzo-table">
+      <thead><tr><th>Потребител</th><th>Роля</th><th>Статус</th><th>Регистриран</th><th>Последен вход</th></tr></thead>
+      <tbody>
+        @foreach (var u in users)
+        {
+          <tr>
+            <td><div style="display:flex;align-items:center;gap:10px">
+              <div class="avatar" style="background:@u.AvatarColor">@u.Avatar</div>
+              <div><div style="font-weight:600">@u.Name</div><div style="font-size:.75rem;color:#475569">@u.Email</div></div>
+            </div></td>
+            <td><span class="badge @RoleBadge(u.Role)">@RoleLabel(u.Role)</span></td>
+            <td><span class="badge @(u.Active?"badge-green":"badge-red")">@(u.Active?"Активен":"Неактивен")</span></td>
+            <td style="color:#475569">@u.CreatedAt.ToString("dd.MM.yyyy")</td>
+            <td style="color:#475569">@(u.LastLogin?.ToString("dd.MM.yyyy") ?? "—")</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+  var superAdmins=@users.Count(u=>u.Role==UserRole.SuperAdmin);
+  var admins=@users.Count(u=>u.Role==UserRole.Admin);
+  var regularUsers=@users.Count(u=>u.Role==UserRole.User);
+  new Chart(document.getElementById('chart-roles'),{type:'doughnut',data:{labels:['Супер Админ','Администратор','Потребител'],datasets:[{data:[superAdmins,admins,regularUsers],backgroundColor:['#7c3aed','#1a4fb5','#f59e0b'],borderWidth:3,borderColor:'#fff'}]},options:{plugins:{legend:{position:'bottom'}},cutout:'60%'}});
+  new Chart(document.getElementById('chart-active'),{type:'bar',data:{labels:['Активни','Неактивни'],datasets:[{data:[@users.Count(u=>u.Active),@users.Count(u=>!u.Active)],backgroundColor:['rgba(22,163,74,.7)','rgba(220,38,38,.6)'],borderRadius:8}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+</script>
