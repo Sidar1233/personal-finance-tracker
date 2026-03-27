@@ -1,0 +1,88 @@
+@model List<Budget>
+@{
+    ViewData["Title"] = "Бюджет";
+    ViewData["Subtitle"] = "Управление на месечни лимити по категории";
+    ViewData["ActiveNav"] = "budget";
+    var spend = (Dictionary<string,decimal>)ViewBag.Spend;
+    var categories = new[]{"Храна","Транспорт","Забавление","Здраве","Наем","Различно"};
+    var now = DateTime.Today;
+}
+
+<div class="grid-3 section-gap">
+  <div class="stat-card"><div class="stat-icon" style="background:#dbeafe">📋</div><div class="stat-label">Категории</div><div class="stat-value">@Model.Count</div></div>
+  <div class="stat-card"><div class="stat-icon" style="background:#dcfce7">✅</div><div class="stat-label">В норма</div><div class="stat-value" style="color:#16a34a">@Model.Count(b=>spend.GetValueOrDefault(b.Category,0)<b.LimitAmount*.75m)</div></div>
+  <div class="stat-card"><div class="stat-icon" style="background:#fef3c7">💰</div><div class="stat-label">Изразходвано / Лимит</div><div class="stat-value" style="color:#f59e0b;font-size:1.1rem">@Model.Sum(b=>spend.GetValueOrDefault(b.Category,0)).ToString("F0") / @Model.Sum(b=>b.LimitAmount).ToString("F0")€</div></div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">🎯 Бюджети – @now.ToString("MMMM yyyy")</span>
+    <button class="btn btn-primary btn-sm" onclick="openModal('modal-add')">+ Добави лимит</button>
+  </div>
+  @if (!Model.Any())
+  {
+    <div class="empty-state"><div class="icon">🎯</div><h4>Няма зададени бюджети</h4><p>Добавете лимит с бутона по-горе</p></div>
+  }
+  @foreach (var b in Model)
+  {
+    var spent = spend.GetValueOrDefault(b.Category, 0m);
+    var pct   = b.LimitAmount > 0 ? (int)Math.Min(100, spent / b.LimitAmount * 100) : 0;
+    var col   = pct >= 100 ? "#dc2626" : pct >= 75 ? "#f59e0b" : "#16a34a";
+    var status= pct >= 100 ? "🔴 Надхвърлен" : pct >= 75 ? "🟡 Внимание" : "🟢 В норма";
+    <div style="padding:18px 0;border-bottom:1px solid #f1f5f9">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-family:'Montserrat',sans-serif;font-weight:700">@b.Category</span>
+          <span class="badge" style="font-size:.72rem">@status</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="color:#475569;font-size:.88rem">@spent.ToString("F2") / @b.LimitAmount.ToString("F2")€</span>
+          <span style="font-family:'Montserrat',sans-serif;font-weight:800;color:@col">@pct%</span>
+          <button class="btn btn-ghost btn-sm" onclick="editBudget('@b.Id','@b.Category',@b.LimitAmount)">✏️</button>
+          <form method="post" action="/Budget/Delete" style="display:inline" onsubmit="return confirm('Изтриване?')">
+            @Html.AntiForgeryToken()<input type="hidden" name="id" value="@b.Id">
+            <button type="submit" class="btn btn-ghost btn-sm">🗑️</button>
+          </form>
+        </div>
+      </div>
+      <div class="progress progress-lg"><div class="progress-fill" style="width:@pct%;background:@col"></div></div>
+      @if (pct >= 75)
+      {
+        <div style="margin-top:6px;font-size:.8rem;color:@col">⚠️ @(pct>=100 ? $"Надхвърлен с {(spent-b.LimitAmount):F2}€" : $"Оставащо: {(b.LimitAmount-spent):F2}€")</div>
+      }
+    </div>
+  }
+</div>
+
+<div class="modal-backdrop" id="modal-add">
+  <div class="modal">
+    <div class="modal-header"><h3 id="bm-title">🎯 Нов бюджетен лимит</h3><button class="modal-close">✕</button></div>
+    <div class="modal-body">
+      <form id="budget-form" method="post" action="/Budget/Add">
+        @Html.AntiForgeryToken()
+        <input type="hidden" id="b-id" name="id" value="">
+        <div class="form-group"><label class="form-label">Категория</label>
+          <select id="b-cat" name="category" class="form-control">
+            @foreach (var c in categories) { <option>@c</option> }
+          </select></div>
+        <div class="form-group"><label class="form-label">Месечен лимит (€)</label>
+          <input id="b-limit" name="limit" type="number" min="1" class="form-control" placeholder="500"></div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add')">Отказ</button>
+      <button class="btn btn-primary" onclick="document.getElementById('budget-form').submit()">💾 Запази</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function editBudget(id, cat, limit) {
+  document.getElementById('budget-form').action = '/Budget/Edit';
+  document.getElementById('b-id').value = id;
+  document.getElementById('b-cat').value = cat;
+  document.getElementById('b-limit').value = limit;
+  document.getElementById('bm-title').textContent = '✏️ Редактиране на бюджет';
+  openModal('modal-add');
+}
+</script>

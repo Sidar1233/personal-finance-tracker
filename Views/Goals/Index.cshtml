@@ -1,0 +1,134 @@
+@model List<SavingsGoal>
+@{
+    ViewData["Title"] = "Спестовни цели";
+    ViewData["Subtitle"] = "Следете напредъка към мечтите си";
+    ViewData["ActiveNav"] = "goals";
+}
+<style>
+.goal-card{background:#fff;border-radius:16px;padding:24px;border:1px solid #e2e8f0;box-shadow:0 4px 20px rgba(26,79,181,.08);transition:box-shadow .25s}
+.goal-card:hover{box-shadow:0 8px 32px rgba(26,79,181,.14)}
+</style>
+
+<div class="grid-3 section-gap">
+  <div class="stat-card"><div class="stat-icon" style="background:#dbeafe">🎯</div><div class="stat-label">Цели</div><div class="stat-value">@Model.Count</div></div>
+  <div class="stat-card"><div class="stat-icon" style="background:#dcfce7">✅</div><div class="stat-label">Завършени</div><div class="stat-value" style="color:#16a34a">@Model.Count(g=>g.SavedAmount>=g.TargetAmount)</div></div>
+  <div class="stat-card"><div class="stat-icon" style="background:#fef3c7">💰</div><div class="stat-label">Спестени / Цел</div><div class="stat-value" style="color:#f59e0b;font-size:1.2rem">@Model.Sum(g=>g.SavedAmount).ToString("F0") / @Model.Sum(g=>g.TargetAmount).ToString("F0")€</div></div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">🏆 Спестовни цели</span>
+    <button class="btn btn-primary btn-sm" onclick="openModal('modal-goal')">+ Нова цел</button>
+  </div>
+  @if (!Model.Any())
+  {
+    <div class="empty-state"><div class="icon">🏆</div><h4>Няма зададени цели</h4></div>
+  }
+  else
+  {
+    <div class="grid-3" style="margin-top:4px">
+      @foreach (var g in Model)
+      {
+        var pct  = g.TargetAmount > 0 ? (int)Math.Min(100, g.SavedAmount / g.TargetAmount * 100) : 0;
+        var done = g.SavedAmount >= g.TargetAmount;
+        var daysLeft = (int)Math.Ceiling((g.Deadline - DateTime.Today).TotalDays);
+        <div class="goal-card">
+          <div style="font-size:2.4rem;margin-bottom:12px">@g.Icon</div>
+          <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:1.1rem;margin-bottom:4px">@g.Name</div>
+          <div style="font-size:.8rem;color:#475569;margin-bottom:16px">📅 @g.Deadline.ToString("dd MMM yyyy") @(daysLeft>0?$"· {daysLeft} дни":"")</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:1.6rem;color:@(done?"#16a34a":"#1a4fb5")">@pct%</div>
+            @if (done) { <span class="badge badge-green">🎉 Постигната!</span> }
+          </div>
+          <div class="progress progress-lg" style="margin-bottom:8px">
+            <div class="progress-fill" style="width:@pct%;background:@(done?"#16a34a":"#1a4fb5")"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:14px">
+            <span>Спестени: <strong>@g.SavedAmount.ToString("F2")€</strong></span>
+            <span>Цел: <strong>@g.TargetAmount.ToString("F2")€</strong></span>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-gold btn-sm" style="flex:1" onclick="openDeposit('@g.Id','@g.Name')">+ Добави</button>
+            <button class="btn btn-ghost btn-sm" onclick="editGoal('@g.Id','@g.Icon','@Html.Raw(g.Name.Replace("'","\\'"))','@g.TargetAmount','@g.SavedAmount','@g.Deadline.ToString("yyyy-MM-dd")')">✏️</button>
+            <form method="post" action="/Goals/Delete" style="display:inline" onsubmit="return confirm('Изтриване?')">
+              @Html.AntiForgeryToken()<input type="hidden" name="id" value="@g.Id">
+              <button type="submit" class="btn btn-ghost btn-sm">🗑️</button>
+            </form>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<!-- Goal modal -->
+<div class="modal-backdrop" id="modal-goal">
+  <div class="modal">
+    <div class="modal-header"><h3 id="gm-title">🏆 Нова цел</h3><button class="modal-close">✕</button></div>
+    <div class="modal-body">
+      <form id="goal-form" method="post" action="/Goals/Add">
+        @Html.AntiForgeryToken()
+        <input type="hidden" id="g-id" name="id" value="">
+        <input type="hidden" id="g-icon" name="icon" value="🎯">
+        <div class="form-group">
+          <label class="form-label">Икона</label>
+          <div id="g-icon-picker" class="emoji-picker">
+            @foreach (var e in new[]{"🎯","✈️","🚗","🏠","💰","🎓","🏖️","💻","📱","🎮","🛍️","💍","🏋️","🎸","🚀","🛡️","🏆","🌍","🎪","🍕","⚽","🎨","📚","🏦","💎","🎁","🌴","🚢","🎬","🐶"})
+            {
+              <button type="button" class="emoji-btn" onclick="pickEmoji('g-icon','g-icon-picker',this,this.textContent.trim())">@e</button>
+            }
+          </div>
+        </div>
+        <div class="form-group"><label class="form-label">Наименование</label><input id="g-name" name="name" class="form-control" placeholder="Ваканция..."></div>
+        <div class="grid-2">
+          <div class="form-group"><label class="form-label">Целева сума (€)</label><input id="g-target" name="target" type="number" min="1" class="form-control"></div>
+          <div class="form-group"><label class="form-label">Вече спестени (€)</label><input id="g-saved" name="saved" type="number" min="0" value="0" class="form-control"></div>
+        </div>
+        <div class="form-group"><label class="form-label">Краен срок</label><input id="g-deadline" name="deadline" type="date" class="form-control"></div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-goal')">Отказ</button>
+      <button class="btn btn-primary" onclick="document.getElementById('goal-form').submit()">💾 Запази</button>
+    </div>
+  </div>
+</div>
+
+<!-- Deposit modal -->
+<div class="modal-backdrop" id="modal-deposit">
+  <div class="modal">
+    <div class="modal-header"><h3>💵 Добави спестявания</h3><button class="modal-close">✕</button></div>
+    <div class="modal-body">
+      <form id="dep-form" method="post" action="/Goals/Deposit">
+        @Html.AntiForgeryToken()
+        <input type="hidden" id="dep-id" name="id">
+        <p id="dep-name" style="font-weight:700;margin-bottom:12px"></p>
+        <div class="form-group"><label class="form-label">Сума (€)</label><input name="amount" type="number" min="1" class="form-control" placeholder="100"></div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-deposit')">Отказ</button>
+      <button class="btn btn-gold" onclick="document.getElementById('dep-form').submit()">💰 Добави</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function editGoal(id,icon,name,target,saved,deadline){
+  document.getElementById('goal-form').action='/Goals/Edit';
+  document.getElementById('g-id').value=id;
+  document.getElementById('g-icon').value=icon;
+  syncEmojiPicker('g-icon-picker', icon);
+  document.getElementById('g-name').value=name;
+  document.getElementById('g-target').value=target;
+  document.getElementById('g-saved').value=saved;
+  document.getElementById('g-deadline').value=deadline;
+  document.getElementById('gm-title').textContent='✏️ Редактиране';
+  openModal('modal-goal');
+}
+function openDeposit(id,name){
+  document.getElementById('dep-id').value=id;
+  document.getElementById('dep-name').textContent=name;
+  openModal('modal-deposit');
+}
+</script>

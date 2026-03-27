@@ -1,0 +1,30 @@
+@model RegisterViewModel
+@{ Layout = null; }
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Payzo – Регистрация</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>body{background:linear-gradient(135deg,#0d3080,#1a4fb5 50%,#2563eb);display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}.box{background:#fff;border-radius:24px;padding:40px;width:100%;max-width:440px;box-shadow:0 40px 100px rgba(0,0,0,.3);animation:slideUp .4s ease}</style>
+</head>
+<body>
+<div class="box">
+  <div style="text-align:center;margin-bottom:22px"><img src="/images/logo.png" style="height:46px" alt="Payzo"></div>
+  <h2 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:1.4rem;text-align:center;color:#0d3080;margin-bottom:20px">Създайте акаунт</h2>
+  @if (!string.IsNullOrEmpty(Model.Error))
+  {
+    <div class="alert alert-error show">❌ @Model.Error</div>
+  }
+  <form method="post" action="/Account/Register">
+    @Html.AntiForgeryToken()
+    <div class="form-group"><label class="form-label">Пълно име</label><input name="Name" class="form-control" placeholder="Иван Петров" value="@Model.Name"></div>
+    <div class="form-group"><label class="form-label">Имейл</label><input name="Email" type="email" class="form-control" placeholder="ivan@example.bg" value="@Model.Email"></div>
+    <div class="form-group"><label class="form-label">Парола</label><input name="Password" type="password" class="form-control" placeholder="Минимум 6 символа"></div>
+    <div class="form-group"><label class="form-label">Потвърди парола</label><input name="ConfirmPassword" type="password" class="form-control" placeholder="Повторете"></div>
+    <button type="submit" class="btn btn-primary btn-full btn-lg" style="margin-top:16px">🚀 Регистрация</button>
+  </form>
+  <p style="text-align:center;margin-top:16px;font-size:.88rem;color:#475569">Имате акаунт? <a href="/Account/Login" style="color:#1a4fb5;font-weight:600">Влезте</a></p>
+</div>
+</body></html>
