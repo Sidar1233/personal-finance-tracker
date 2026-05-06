@@ -1,0 +1,79 @@
+@model Payzo.Models.User
+@{
+    ViewData["Title"]     = "Профил";
+    ViewData["Subtitle"]  = "Управление на вашия акаунт";
+    ViewData["ActiveNav"] = "profile";
+
+    string RoleBadge(UserRole r) => r switch {
+        UserRole.SuperAdmin => "role-superadmin",
+        UserRole.Admin      => "role-admin",
+        _                   => "role-user"
+    };
+    string RoleLabel(UserRole r) => r switch {
+        UserRole.SuperAdmin => "Супер Администратор",
+        UserRole.Admin      => "Администратор",
+        _                   => "Потребител"
+    };
+}
+
+<div class="grid-2">
+  <div class="card">
+    <div style="text-align:center;margin-bottom:24px">
+      <div class="avatar avatar-xl" style="background:@Model.AvatarColor;margin:0 auto 14px">@Model.Avatar</div>
+      <h2 style="font-size:1.4rem">@Model.Name</h2>
+      <div style="margin-top:8px">
+        <span class="badge @RoleBadge(Model.Role)">@RoleLabel(Model.Role)</span>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <form method="post" action="/Account/Profile">
+      @Html.AntiForgeryToken()
+      <div class="form-group">
+        <label class="form-label">Пълно име</label>
+        <input name="name" class="form-control" value="@Model.Name">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Имейл</label>
+        <input name="email" type="email" class="form-control" value="@Model.Email">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Нова парола <span style="font-weight:400;color:#94a3b8">(оставете празно за без промяна)</span></label>
+        <input name="password" type="password" class="form-control" placeholder="Нова парола...">
+      </div>
+      <button type="submit" class="btn btn-primary btn-full" style="margin-top:8px">💾 Запази промените</button>
+    </form>
+  </div>
+
+  <div>
+    <div class="card section-gap">
+      <div class="card-header"><span class="card-title">📊 Информация за акаунта</span></div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div>
+          <div class="text-muted">ID</div>
+          <div style="font-family:monospace;font-size:.85rem">@Model.Id</div>
+        </div>
+        <div>
+          <div class="text-muted">Регистриран на</div>
+          <div style="font-weight:600">@Model.CreatedAt.ToString("dd MMMM yyyy")</div>
+        </div>
+        <div>
+          <div class="text-muted">Последен вход</div>
+          <div style="font-weight:600">@(Model.LastLogin?.ToString("dd MMMM yyyy, HH:mm") ?? "—")</div>
+        </div>
+        <div>
+          <div class="text-muted">Статус</div>
+          <span class="badge @(Model.Active ? "badge-green" : "badge-red")">@(Model.Active ? "● Активен" : "○ Неактивен")</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><span class="card-title">🔒 Сигурност</span></div>
+      <p class="text-muted" style="margin-bottom:16px">Паролата е защитена с BCrypt хеширане.</p>
+      <form method="post" action="/Account/Logout">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn-danger btn-sm">🚪 Изход от акаунта</button>
+      </form>
+    </div>
+  </div>
+</div>
