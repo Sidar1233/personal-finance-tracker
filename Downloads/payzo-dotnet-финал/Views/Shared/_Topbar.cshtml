@@ -1,0 +1,24 @@
+@using System.Security.Claims
+@{
+    var avatar      = User.FindFirst("Avatar")?.Value ?? "?";
+    var avatarColor = User.FindFirst("AvatarColor")?.Value ?? "#1a4fb5";
+    var pageTitle   = ViewData["Title"]?.ToString() ?? "Payzo";
+    var pageSubtitle= ViewData["Subtitle"]?.ToString() ?? "";
+}
+<div class="topbar">
+  <div class="topbar-left">
+    <h1>@pageTitle</h1>
+    @if (!string.IsNullOrEmpty(pageSubtitle))
+    {
+      <p>@pageSubtitle</p>
+    }
+  </div>
+  <div class="topbar-right">
+    <div class="avatar" style="background:@avatarColor;cursor:pointer"
+         onclick="window.location.href='/Account/Profile'" title="Профил">@avatar</div>
+    <form method="post" action="/Account/Logout" style="display:inline">
+      @Html.AntiForgeryToken()
+      <button type="submit" class="btn btn-ghost btn-sm">Изход</button>
+    </form>
+  </div>
+</div>
