@@ -1,0 +1,105 @@
+@model DashboardViewModel
+@{
+    ViewData["Title"] = "Табло";
+    ViewData["Subtitle"] = $"Добре дошъл, {Model.CurrentUser.Name.Split(' ')[0]}! 👋";
+    ViewData["ActiveNav"] = "dashboard";
+}
+<style>
+.balance-hero{background:linear-gradient(135deg,#0d3080,#1a4fb5);color:#fff;border-radius:20px;padding:28px 32px;display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;box-shadow:0 12px 40px rgba(26,79,181,.3);flex-wrap:wrap;gap:20px}
+.txn-row{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid #f1f5f9}
+.txn-row:last-child{border-bottom:none}
+.txn-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0}
+.budget-row{margin-bottom:16px}
+</style>
+
+<!-- Balance hero -->
+<div class="balance-hero">
+  <div>
+    <div style="font-size:.85rem;opacity:.7;margin-bottom:4px">Общ баланс</div>
+    <div style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:2.8rem">@Model.Balance.ToString("F2")€</div>
+    <div style="font-size:.85rem;color:#86efac;margin-top:4px">↑ Текущ баланс</div>
+  </div>
+  <div style="display:flex;gap:32px;flex-wrap:wrap">
+    <div><div style="font-size:.75rem;opacity:.6">Приходи (месец)</div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:1.1rem;color:#86efac">+@Model.MonthIncome.ToString("F2")€</div></div>
+    <div><div style="font-size:.75rem;opacity:.6">Разходи (месец)</div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:1.1rem;color:#fca5a5">-@Model.MonthExpenses.ToString("F2")€</div></div>
+    <div><div style="font-size:.75rem;opacity:.6">Транзакции</div><div style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:1.1rem">@Model.TransactionCount</div></div>
+  </div>
+</div>
+
+<!-- Stat cards -->
+<div class="grid-4 section-gap">
+  <div class="stat-card"><div class="stat-icon" style="background:#dcfce7">📥</div><div class="stat-label">Приходи</div><div class="stat-value" style="color:#16a34a">@Model.MonthIncome.ToString("F2")€</div></div>
+  <div class="stat-card"><div class="stat-icon" style="background:#fee2e2">📤</div><div class="stat-label">Разходи</div><div class="stat-value" style="color:#dc2626">@Model.MonthExpenses.ToString("F2")€</div></div>
+  <div class="stat-card"><div class="stat-icon" style="background:#fef3c7">🏦</div><div class="stat-label">Спестени</div><div class="stat-value" style="color:#f59e0b">@((Model.MonthIncome - Model.MonthExpenses).ToString("F2"))€</div></div>
+  <div class="stat-card"><div class="stat-icon" style="background:#dcfce7">📊</div><div class="stat-label">Транзакции</div><div class="stat-value">@Model.TransactionCount</div></div>
+</div>
+
+<!-- Charts -->
+<div class="grid-2-1 section-gap">
+  <div class="card">
+    <div class="card-header"><span class="card-title">📈 Приходи vs Разходи</span></div>
+    <canvas id="chart-bar" height="120"></canvas>
+  </div>
+  <div class="card">
+    <div class="card-header"><span class="card-title">🍩 По категории</span></div>
+    <canvas id="chart-pie" height="160"></canvas>
+  </div>
+</div>
+
+<!-- Recent txns + budget -->
+<div class="grid-2">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">💳 Последни транзакции</span>
+      <a href="/Transactions/Index" class="btn btn-ghost btn-sm">Всички →</a>
+    </div>
+    @if (!Model.RecentTransactions.Any())
+    {
+      <div class="empty-state"><div class="icon">📭</div><h4>Няма транзакции</h4></div>
+    }
+    @foreach (var t in Model.RecentTransactions)
+    {
+      <div class="txn-row">
+        <div class="txn-icon" style="background:@(t.Type==TransactionType.Income?"#dcfce7":"#fee2e2")">@t.Icon</div>
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:.9rem">@t.Description</div>
+          <div style="font-size:.78rem;color:#475569">@t.Date.ToString("dd MMM yyyy") · @t.Category</div>
+        </div>
+        <div class="@(t.Type==TransactionType.Income?"text-income":"text-expense")">
+          @(t.Type==TransactionType.Income?"+":"-")@t.Amount.ToString("F2")€
+        </div>
+      </div>
+    }
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">🎯 Бюджет – @DateTime.Today.ToString("MMMM yyyy")</span>
+      <a href="/Budget/Index" class="btn btn-ghost btn-sm">Детайли →</a>
+    </div>
+    @foreach (var b in Model.Budgets)
+    {
+      var spent = Model.SpendByCategory.GetValueOrDefault(b.Category, 0);
+      var pct   = b.LimitAmount > 0 ? (int)Math.Min(100, spent / b.LimitAmount * 100) : 0;
+      var col   = pct >= 100 ? "#dc2626" : pct >= 75 ? "#f59e0b" : "#16a34a";
+      <div class="budget-row">
+        <div style="display:flex;justify-content:space-between;font-size:.88rem;margin-bottom:6px">
+          <span style="font-weight:600">@b.Category</span>
+          <span style="color:#475569">@spent.ToString("F0") / @b.LimitAmount.ToString("F0")€</span>
+        </div>
+        <div class="progress"><div class="progress-fill" style="width:@pct%;background:@col"></div></div>
+      </div>
+    }
+    @if (!Model.Budgets.Any())
+    {
+      <div class="empty-state"><div class="icon">🎯</div><h4>Няма зададени бюджети</h4></div>
+    }
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+  var cats = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SpendByCategory.Keys.ToArray()));
+  var vals = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SpendByCategory.Values.Select(v=>(double)v).ToArray()));
+  new Chart(document.getElementById('chart-bar'),{type:'bar',data:{labels:['Окт','Ное','Дек','Яну','Фев','Мар'],datasets:[{label:'Приходи',data:[2100,2400,2600,2300,2450,@Model.MonthIncome],backgroundColor:'rgba(22,163,74,.7)',borderRadius:6},{label:'Разходи',data:[1800,1950,2100,1700,1890,@Model.MonthExpenses],backgroundColor:'rgba(220,38,38,.6)',borderRadius:6}]},options:{plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}},responsive:true}});
+  new Chart(document.getElementById('chart-pie'),{type:'doughnut',data:{labels:cats,datasets:[{data:vals,backgroundColor:['#1a4fb5','#f59e0b','#ec4899','#16a34a','#7c3aed','#0d9488'],borderWidth:2,borderColor:'#fff'}]},options:{plugins:{legend:{position:'bottom'}},cutout:'65%',responsive:true}});
+</script>
